@@ -44,13 +44,14 @@ def inputs_to_jsons(path):
 def unique_city_name(l):
     dic = {}
     for e in l:
+        print(e)
         if e[1] in dic:
             if e[2] in dic[e[1]]:
                 dic[e[1]][e[2]] += 1
             else:
-                dic[e[1]].append(e[2])
+                dic[e[1]][e[2]] = 1
         else:
-            dic[e[1]] = [e[2]]
+            dic[e[1]] = {e[2] : 1}
 
     f = open('unique_city.txt', 'w')
     json.dump(dic, f)
