@@ -1,0 +1,9 @@
+--> lignes en doubles : 							correction en les aggrégeant
+--> valeurs nulles (ex : ''): 							correction par la suppression
+--> valeurs à multiples labels (corrects et incorrects) : 			?		
+--> valeurs incohérentes facilement identifiable (ex : N° de tel) :		correction par la suppression
+--> valeurs mal-orthographié :							correction en gardant l'orthographe prépondérante (mesure de JeSaisPlusQui)
+--> valeurs inutilement localisées (ex : les aéroports) :			?
+--> valeurs incohérentes difficilement indetifiables (ex : 'LOPER AVENUE') :	?
+--> valeurs en CAPS, d'autres non :						on choisi une norme
+--> 
