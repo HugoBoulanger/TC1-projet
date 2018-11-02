@@ -42,7 +42,7 @@ def inputs_to_jsons(path):
         except:
             print(f'Exception at line {i}')
         i += 1
-    print(in_data[:20])
+    print(in_data[:10])
     f = open(working_dir + 'curated_input.txt', 'w')
     json.dump(in_data, f)
     f.close()
@@ -107,7 +107,7 @@ if __name__ == '__main__':
     in_data, dic = inputs_to_jsons(working_dir + 'Problem 3 Input Data.txt')
     f = open(working_dir + 'curated_input.txt', 'r')
     l = json.load(f)
-    f.closee()
+    f.close()
     unique_city = unique_city_name(l)
     unique_CN = unique_CN_code(l)
     nbc = nb_country(unique_city)
