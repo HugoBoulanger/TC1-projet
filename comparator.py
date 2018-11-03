@@ -2,6 +2,7 @@
 
 import re
 import json
+import numpy as np
 from time import time
 
 def compareString(str1,ref):
@@ -41,8 +42,60 @@ def editDistance(str1,str2):
         if(i > 0):
             cost[len(str2)] = lastValue
     return cost[len(str2)]
+
+def suppStreet(data):
+    """
+    prends tous noms de rues et d'avenues et les agrèges
+    data : liste de villes
+    """
+    avenue = re.compile(r"\'.*? AVENUE\'")
+    street = re.compile(r"\'.*? STREET\'")
+    dic = {"STREET" : [], "AVENUE" : []}
+    iter = 0
+    for elt in data:
+        a = avenue.match(elt)
+        s = street.match(elt)
+        if(iter%1000==0):
+            print(elt,a,s) 
+        iter += 1
+        if a is not None:
+            dic["AVENUE"].append(a)
+        elif s is not None:
+            dic["AVENUE"].append(s)
+    return dic
     
-def testOnData(data,limite,file):
+def trueRepresentant(dic,dataLabel,file):
+    """
+    prend le résultat de "aggregate" et transforme les clés pour obtenir le véritable représentant (celui qui a la bonne orthographe)
+    newDic : dictionnaire des villes similaires (résultat de "aggregate")
+    dataLabel : dictionnaire {"ville" : [liste de CN]}
+    file : nom du fichier où sauver le retour (sans extension)
+    """
+    newDic = {} #forme {"ville" : "ville"}
+    for elt in dic.keys():
+        listName = [elt]+dic[elt]
+        referance = []
+        label = []
+        for city in listName:
+            firstLabel = list(dataLabel[city].keys())[0]
+            label.append(firstLabel)
+            referance.append(dataLabel[city][firstLabel]) #normalement de type int
+        i = np.argmax(referance)
+        for city in listName:
+            #TODO rattrapper les erreurs d'agrégation lorsque c'est faisable (ex : ROMA, LIMA, GAO)
+            newDic[city] = listName[i]
+    print(f"taille de newDic = {len(newDic)}/{len(dataLabel)}") #doit être égal au nombre de ville
+    f = open(working_dir + file + ".txt","w")
+    for elt in newDic.keys():
+        toPrint = elt + " : " + newDic[elt] + "\n"
+        f.write(toPrint)
+    f.close()
+    f = open(working_dir + file + "DUMP.txt","w")
+    json.dump(newDic,f)
+    f.close()
+    return newDic
+    
+def aggregate(data,limite,file):
     """
     data : ensemble itérable de chaînes de caractères dont certaines sont proches
     limite : flottant entre 0. et 1. : rapport de ressemblance autorisé entre 2 chaînes pour les considérer comme égales
@@ -70,7 +123,7 @@ def testOnData(data,limite,file):
             dic[elt] = []
         iter += 1
         if(iter%200 == 0):
-            print(f"\ndic a {len(dic.keys())} clés")
+            print(f"\nligne {iter/200}, dic a {len(dic.keys())} clés")
         print(".",end="")
     print(f"\ntemps de calcul : {int(time()-top)}s\nnouveau nombre de clés : {len(dic)}\nsauvegarde du fichier...",end="")
     f = open(working_dir + file + ".txt","w")
@@ -82,14 +135,20 @@ def testOnData(data,limite,file):
             f.write(toPrint)
         f.write("##############\n")
     f.close()
+    f = open(working_dir + file + "DUMP.txt","w")
+    json.dump(newDic,f)
+    f.close()
     print(" ... achevée")
     print(f"durée totale : {int(time() - top)}s")
     return dic
 
-#testDic75 = testOnData(unique_city.keys(),0.75,"similarity75") #COMPUTE ON ALL CITIES
-#testDic65 = testOnData(unique_city.keys(),0.65,"similarity65") #COMPUTE ON ALL CITIES
-#testDic7 = testOnData(unique_city.keys(),0.7,"similarity7") #COMPUTE ON ALL CITIES
-#testDic5 = testOnData(unique_city.keys(),0.5,"similarity5") #COMPUTE ON ALL CITIES
+
+listcities = list(unique_city.keys())
+listcities.sort()
+#testDic75 = aggregate(listcities,0.75,"similarity75") #COMPUTE ON ALL CITIES
+#testDic65 = aggregate(listcities,0.65,"similarity65") #COMPUTE ON ALL CITIES
+#testDic7 = aggregate(list(listcities,0.7,"similarity7") #COMPUTE ON ALL CITIES
+#testDic5 = aggregate(list(listcities,0.5,"similarity5") #COMPUTE ON ALL CITIES
 
 
 ##Test sur des sous-ensembles de city_name.txt

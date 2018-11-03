@@ -3,7 +3,31 @@
 --> valeurs à multiples labels (corrects et incorrects) : 			?		
 --> valeurs incohérentes facilement identifiable (ex : N° de tel) :		correction par la suppression
 --> valeurs mal-orthographié :							correction en gardant l'orthographe prépondérante (mesure de JeSaisPlusQui)
---> valeurs inutilement localisées (ex : les aéroports) :			?
---> valeurs incohérentes difficilement indetifiables (ex : 'LOPER AVENUE') :	?
 --> valeurs en CAPS, d'autres non :						on choisi une norme
---> 
+--> précisions entre :								normaliser en les retirant
+	- toute partie entre parenthèses
+	- aéroport
+	- street
+	- avenue
+	- city, ciudad
+	- nombre
+	- cedex
+	- west,east,north,south ?
+	- prov (pour province)
+	- ...
+--> noms inversés (ex : 'ZURICH FLUGHAFEN' et 'FLUGHAFEN ZURICH') :		normaliser en comparant les noms triés dans l'ordre alphabétique
+--> erreurs prédominantes sur l'information correcte :				???
+
+
+
+Démarche :
+#1) agréger les doublons
+#2) supprimer les nulls
+#3) supprimer les incohérents faciles
+#4) supprimer les termes inutiles                           -> on sauve quelque part l'association "terme initial" -> "terme nettoyé"
+#5) replacer les sous-mots par ordre alphabétique (trie)    -> on sauve quelque part l'association "terme initial" -> "terme inversé"
+#6) agréger les similaires
+#7) choisir le représentants de chaque classes de similaires
+#8) retirer les incohérents difficiles (classe 1 représentant, caractères incohérents dans le représentant, peu de représentativité)
+#9) corriger les countryCode faux (peu représenté) : remplacement par le plus prépondérent
+#10) écrire le fichier de sortie : InputCity, CN, OutputCity, CountryName
