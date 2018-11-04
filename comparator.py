@@ -1,10 +1,12 @@
 ##Correction orthographique
 
-import re
-import json
-import numpy as np
 from time import time
+import numpy as np
+import json
+import re
 
+
+##Test de Similarité
 def compareString(str1,ref):
     """
     str1 : chaine de caractère à comparer
@@ -43,58 +45,6 @@ def editDistance(str1,str2):
             cost[len(str2)] = lastValue
     return cost[len(str2)]
 
-def suppStreet(data):
-    """
-    prends tous noms de rues et d'avenues et les agrèges
-    data : liste de villes
-    """
-    avenue = re.compile(r"\'.*? AVENUE\'")
-    street = re.compile(r"\'.*? STREET\'")
-    dic = {"STREET" : [], "AVENUE" : []}
-    iter = 0
-    for elt in data:
-        a = avenue.match(elt)
-        s = street.match(elt)
-        if(iter%1000==0):
-            print(elt,a,s) 
-        iter += 1
-        if a is not None:
-            dic["AVENUE"].append(a)
-        elif s is not None:
-            dic["AVENUE"].append(s)
-    return dic
-    
-def trueRepresentant(dic,dataLabel,file):
-    """
-    prend le résultat de "aggregate" et transforme les clés pour obtenir le véritable représentant (celui qui a la bonne orthographe)
-    newDic : dictionnaire des villes similaires (résultat de "aggregate")
-    dataLabel : dictionnaire {"ville" : [liste de CN]}
-    file : nom du fichier où sauver le retour (sans extension)
-    """
-    newDic = {} #forme {"ville" : "ville"}
-    for elt in dic.keys():
-        listName = [elt]+dic[elt]
-        referance = []
-        label = []
-        for city in listName:
-            firstLabel = list(dataLabel[city].keys())[0]
-            label.append(firstLabel)
-            referance.append(dataLabel[city][firstLabel]) #normalement de type int
-        i = np.argmax(referance)
-        for city in listName:
-            #TODO rattrapper les erreurs d'agrégation lorsque c'est faisable (ex : ROMA, LIMA, GAO)
-            newDic[city] = listName[i]
-    print(f"taille de newDic = {len(newDic)}/{len(dataLabel)}") #doit être égal au nombre de ville
-    f = open(working_dir + file + ".txt","w")
-    for elt in newDic.keys():
-        toPrint = elt + " : " + newDic[elt] + "\n"
-        f.write(toPrint)
-    f.close()
-    f = open(working_dir + file + "DUMP.txt","w")
-    json.dump(newDic,f)
-    f.close()
-    return newDic
-    
 def aggregate(data,limite,file):
     """
     data : ensemble itérable de chaînes de caractères dont certaines sont proches
@@ -136,22 +86,127 @@ def aggregate(data,limite,file):
         f.write("##############\n")
     f.close()
     f = open(working_dir + file + "DUMP.txt","w")
-    json.dump(newDic,f)
+    json.dump(dic,f)
     f.close()
     print(" ... achevée")
     print(f"durée totale : {int(time() - top)}s")
     return dic
+    
+##Nettoyage et Traitement de l'agrégation
+def trueRepresentant(dic,dataLabel,file):
+    """
+    prend le résultat de "aggregate" et transforme les clés pour obtenir le véritable représentant (celui qui a la bonne orthographe)
+    newDic : dictionnaire des villes similaires (résultat de "aggregate")
+    dataLabel : dictionnaire {"ville" : [liste de CN]}
+    file : nom du fichier où sauver le retour (sans extension)
+    """
+    newDic = {} #forme {"ville" : "ville"}
+    for elt in dic.keys():
+        listName = [elt]+dic[elt]
+        referance = []
+        label = []
+        for city in listName:
+            firstLabel = list(dataLabel[city].keys())[0]
+            label.append(firstLabel)
+            referance.append(dataLabel[city][firstLabel]) #normalement de type int
+        i = np.argmax(referance)
+        labelI = label[i]
+        for city in listName:
+            #TODO rattrapper les erreurs d'agrégation lorsque c'est faisable (ex : ROMA, LIMA, GAO)
+            j = np.argmax(list(dataLabel[city].values()))
+            labelJ = list(dataLabel[city].keys())[j]
+            if(labelI == labelJ):
+                newDic[city] = listName[i]
+            else:
+                newDic[city] = city #pas le même pays prédominant, c'est sans doute une erreur d'agrégation
+    print(f"taille de newDic = {len(newDic)}/{len(dataLabel)}") #doit être égal au nombre de ville
+    f = open(working_dir + file + ".txt","w")
+    for elt in newDic.keys():
+        toPrint = elt + " : " + newDic[elt] + "\n"
+        f.write(toPrint)
+    f.close()
+    f = open(working_dir + file + "DUMP.txt","w")
+    json.dump(newDic,f)
+    f.close()
+    return newDic
+    
+def deleteIncoherents(data):
+    """
+    data : dictionnaire "ville" -> "[liste villes]"
+    supprime les clés comportant des caractères incohérents (chiffres, ponctuations, etc...) qui n'ont qu'un seul représentant
+    """
+    dic = {}
+    incoherent = re.compile(r".*[^A-Za-z., \-\"\'\\\/]+.*")
+    for key,elt in data.items():
+        if (incoherent.match(key) and len(elt) == 0):
+            pass
+        else:
+            dic[key] = elt
+    return dic
 
-
-listcities = list(unique_city.keys())
-listcities.sort()
-#testDic75 = aggregate(listcities,0.75,"similarity75") #COMPUTE ON ALL CITIES
-#testDic65 = aggregate(listcities,0.65,"similarity65") #COMPUTE ON ALL CITIES
-#testDic7 = aggregate(list(listcities,0.7,"similarity7") #COMPUTE ON ALL CITIES
-#testDic5 = aggregate(list(listcities,0.5,"similarity5") #COMPUTE ON ALL CITIES
-
+##Nettoyage des données brutes
+def cleanData(data):
+    """
+    data : énumérable de villes
+    nettoyage :
+        - supprime les termes : AVENUE, STREET, CITY, CIUDAD, CEDEX, () en fin de chaîne.
+        - élimine du set initial tous les éléments ne comportant pas de termes alphabétiques (ex : numéros de téléphone)
+    """
+    avenue = re.compile(r".* *AVENUE")
+    street = re.compile(r".* *STREET")
+    city = re.compile(r".*-? ?CITY")
+    ciudad = re.compile(r".* ?-?CIUDAD")
+    town = re.compile(r".* ?-?TOWN")
+    cedex = re.compile(r".* *CEDEX.*")
+    nombre = re.compile(r"[^A-Za-z]+")
+    nombreFin = re.compile(r".+ ?[^A-Za-z]+")
+    parenthese = re.compile(r".+\(.+\)")
+    dic = {}
+    for elt in data:
+        if nombre.match(elt) is not None:
+            pass #on ne les veut pas dans le set final
+        elif avenue.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ]) *AVENUE",r"\g<before>",elt)
+        elif street.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ]) *STREET",r"\g<before>",elt)
+        elif city.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ])-? ?CITY(?P<after>[A-Z ])",r"\g<before>\g<after>",elt)
+        elif ciudad.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ])-? ?CIUDAD(?P<after>[A-Z ])",r"\g<before>\g<after>",elt)
+        elif town.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ])-? ?TOWN(?P<after>[A-Z ])",r"\g<before>\g<after>",elt)
+        elif parenthese.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ]) *\(.+\)",r"\g<before>",elt)
+        elif cedex.match(elt) is not None:
+            dic[elt] = re.sub(r"(?P<before>.+[^ ]) *CEDEX.*",r"\g<before>",elt)
+        elif nombreFin.match(elt):
+            dic[elt] = re.sub(r"(?P<before>.+[^ ]) *[^A-Za-z]+$",r"\g<before>",elt)
+        else:
+            dic[elt] = elt
+    return dic
+    
+def sortData(data):
+    """
+    data : dictionnaire "ville" -> "ville"
+    nettoyage :
+        - réorganise les chaînes de plusieurs mots en triant les sous-mots par ordre alphabétique
+    """
+    dic = {}
+    for key,elt in data.items():
+        listMot = elt.split(" ") #on récupère les sous-mots
+        listMot.sort()
+        eltFinal = " ".join(listMot) #chaîne avec les sous-mots triés
+        dic[key] = eltFinal
+    return dic
 
 ##Test sur des sous-ensembles de city_name.txt
+# listcities = list(unique_city.keys())
+# listcities.sort()
+# testDic75 = aggregate(listcities,0.75,"similarity75") #COMPUTE ON ALL CITIES
+# testDic65 = aggregate(listcities,0.65,"similarity65") #COMPUTE ON ALL CITIES
+# testDic7 = aggregate(list(listcities,0.7,"similarity7") #COMPUTE ON ALL CITIES
+# testDic5 = aggregate(list(listcities,0.5,"similarity5") #COMPUTE ON ALL CITIES
+
 adelaide = ['ADELAAIDE','ADELADE','ADELAID','ADELAIDE - SA','ADELAIDE SA','ADELAIDE','ADELAIDE, SA','ADELAIDE,','ADELAIDEE','ADELAIDEPARK','ADELAIDEV','ADELANTO','ADELIADE S.A.','ADELIADE','ADELIDE'] #test classique : 1 classe attendue
 aguacaliente = ['AGUACALIENTES','AGUAS CALIENTES','AGUASCAILIENTES','AGUASCALEINETES','AGUASCALEINTES','AGUASCALENTES','AGUASCALIENES','AGUASCALIENTE','AGUASCALIENTES','AGUASCALIENTES, A','AGUASCALIENTES,','AGUASCALIENTES,AG','AGUASCALIENTESS','AGUASCALIENTS','AGUASCAUENTES','AGUSACALIENTES','AGUSCALIENTES'] #test facile : 1 classe attendue
 huntingwood = ['HUNTIGDON','HUNTIGNWOOD','HUNTIGWOOD','HUNTIMDON','HUNTINDON','HUNTINGDOM VALLY','HUNTINGDOM-EX','HUNTINGDOM-EX-','HUNTINGDON VALLEY','HUNTINGDON VALLY','HUNTINGDON','HUNTINGDON-EX','HUNTINGDON-EX-','HUNTINGOOD','HUNTINGSON VALLEY','HUNTINGTON BCH','HUNTINGTON BEACH','HUNTINGTON PARK','HUNTINGTON STATIN','HUNTINGTON STATIO','HUNTINGTON VALLEY','HUNTINGTON VALLY','HUNTINGTON','HUNTINGWOOD NSW','HUNTINGWOOD','HUNTINGWOODD','HUNTINGWOODS','HUNTINGWOOOD','HUNTINGWWOD','HUNTINWOOD'] #1 classe attendue
