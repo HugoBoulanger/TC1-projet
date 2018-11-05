@@ -112,7 +112,6 @@ def trueRepresentant(dic,dataLabel,file):
         i = np.argmax(referance)
         labelI = label[i]
         for city in listName:
-            #TODO rattrapper les erreurs d'agrégation lorsque c'est faisable (ex : ROMA, LIMA, GAO)
             j = np.argmax(list(dataLabel[city].values()))
             labelJ = list(dataLabel[city].keys())[j]
             if(labelI == labelJ):
@@ -197,6 +196,51 @@ def sortData(data):
         listMot.sort()
         eltFinal = " ".join(listMot) #chaîne avec les sous-mots triés
         dic[key] = eltFinal
+    return dic
+    
+def suppLabel(data,a,seuil):
+    """
+    supprime les labels probablement faux des données
+    data : dictionnaire : "ville" -> dict{"CN":int}
+    a : nombre de labels au dessus duquel des coupes sont envisagées (int min 1)
+    seuil : int > 1
+    output : dictionnaire : "ville" -> dict{"CN":int}
+    """
+    dic = {}
+    nb = {}
+    j = 0 #for function' stat
+    k = 0 #for function' stat
+    m = 0 #for function' stat
+    n = 0 #for function' stat
+    o = 0 #for function' stat
+    b = a+2 #nombre de labels à partir duquel on considère qu'il y en peu (for function' stat)
+    c = a+4 #nombre de labels à partir duquel on considère qu'il y en a bcp (for function' stat)
+    for key,elt in data.items():
+        if(len(elt) > a):
+            supp = False
+            m+=1
+            if(len(elt) in nb):
+                nb[len(elt)] += 1
+            else:
+                nb[len(elt)] = 1
+            if(len(elt) < b):
+                n+=1 #ville avec moins de 4 labels (labels probablement bons
+            elif(len(elt) > c):
+                o+=1 #ville avec plus de 7 labels (labels probablement faux)
+            i = np.max(list(elt.values()))
+            eltcopy = elt.copy()
+            for cn in elt:
+                if elt[cn] < round(i/seuil):
+                    j+=1
+                    supp = True
+                    del eltcopy[cn]
+            if(supp):
+                k+=1 #ville a subis des coupes dans ses labels
+            dic[key] = eltcopy
+        else:
+            dic[key] = elt
+    print(f"{m} villes avec plus de {a} labels dont\n{n} avec {b-1} labels et\n{o} avec plus de {c} labels\n{k} villes avec labels supprimés\n{j} labels supprimés") #function' stat
+    print(nb)
     return dic
 
 ##Test sur des sous-ensembles de city_name.txt

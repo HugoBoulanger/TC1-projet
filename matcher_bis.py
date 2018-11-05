@@ -123,6 +123,7 @@ def makeOutput(inputCity,uniqueCity,sortCity,realName,mapCity,labelClean,country
     for city,cn in inputCity:
         inc = False
         if(city in uniqueCity): #toutes les villes sont dans uniqueCity sauf les null
+            listLign = [city,cn]
             #Récupération du nom réel de la ville
             sortedCity = None
             if(city not in sortCity or sortCity[city] not in realName):
@@ -131,6 +132,7 @@ def makeOutput(inputCity,uniqueCity,sortCity,realName,mapCity,labelClean,country
             else:
                 sortedCity = realName[sortCity[city]]
                 cityName = mapCity[sortedCity]
+            listLign.append(cityName)
             #récupération du nom réel du pays
             if(cn not in country):
                 #tentative de rattrapage du label faux grâce au label prédominant de la classe de nom
@@ -142,9 +144,18 @@ def makeOutput(inputCity,uniqueCity,sortCity,realName,mapCity,labelClean,country
                     inc = True
                 else:
                     countryName = country[listCN[i]] #rattrapage du label faux grâce au label prédominant de la classe de nom
+                listLign.append(countryName)
             else:
-                countryName = country[cn]
-            listLign = [city,cn,cityName,countryName]
+                if(cn in uniqueCity[city]):
+                    countryName = country[cn]
+                    listLign.append(countryName)
+                else: #rattrapage du mauvais label
+                    listCN = list(uniqueCity[city].keys())
+                    listInt = list(uniqueCity[city].values())
+                    i = np.argmax(listInt)
+                    countryName = country[listCN[i]]
+                    listLign.append(countryName)
+                    listLign.append("FALSE DATA") #le label donné n'était pas le bon, il a été rattrapé mais on précise que le label était incorrect
             if(inc):
                 listLign.append("INCOHERENT DATA") #data incohérente (mauvais label, numéro de téléphone, nom clairement faux et ne correspondant à aucune autre ville, etc...)
         else:
