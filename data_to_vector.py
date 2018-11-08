@@ -41,7 +41,9 @@ def curated_inputs_vector_cn(path, space_cn, space_name):
     f.close()
     cv = []
     for e in cur:
+
         cn = [0 for i in range(len(space_cn))]
+        '''
         if e[2] in space_cn:
             cn[space_cn[e[1]]] = 1
         else:
@@ -49,17 +51,25 @@ def curated_inputs_vector_cn(path, space_cn, space_name):
                 if e[2][0] == k[0] or e[2][1] == k[1]:
                     cn[va] = 0.5
 
+        '''
+        cname = e[1].upper()
+        for c in cname:
+            if c in space_name.keys():
+                cn[space_name[c]] += 1
+
         name = e[0].upper()
         nv = [0 for i in range(len(space_name))]
         for c in name:
             if c in space_name.keys():
                 nv[space_name[c]] += 1
 
-        cv.append((e[1], e[2], nv, cn))
+        cv.append((nv, cn))
 
-    f = open('vectorized.txt')
+    f = open('vectorized.txt', 'w')
     json.dump(cv, f)
     f.close()
     return cv
 
 create_cn_space('Problem 3 Input Data - Country Map.txt')
+dic = upper_dict()
+curated_inputs_vector_cn('Problem 3 Input Datacurated_input.txt', dic, dic)
